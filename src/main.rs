@@ -444,7 +444,7 @@ async fn get_setup() -> Setup {
     .optopt(
         BITRATE_SHORT,
         BITRATE,
-        "Bitrate (kbps) {96|160|320}. Defaults to 160.",
+        "Bitrate {96|160|320|lossless}. Defaults to 160.",
         "BITRATE",
     )
     .optopt(
@@ -1564,7 +1564,13 @@ async fn get_setup() -> Setup {
             .as_deref()
             .map(|bitrate| {
                 Bitrate::from_str(bitrate).unwrap_or_else(|_| {
-                    invalid_error_msg(BITRATE, BITRATE_SHORT, bitrate, "96, 160, 320", "160");
+                    invalid_error_msg(
+                        BITRATE,
+                        BITRATE_SHORT,
+                        bitrate,
+                        "96, 160, 320, lossless",
+                        "160",
+                    );
                     exit(1);
                 })
             })

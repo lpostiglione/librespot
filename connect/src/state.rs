@@ -14,7 +14,10 @@ use crate::{
     },
     model::SpircPlayStatus,
     protocol::{
-        connect::{Capabilities, Device, DeviceInfo, MemberType, PutStateReason, PutStateRequest},
+        connect::{
+            Capabilities, CapabilitySupportDetails, Device, DeviceInfo, MemberType, PutStateReason,
+            PutStateRequest,
+        },
         media::AudioQuality,
         player::{
             ContextIndex, ContextPlayerOptions, PlayOrigin, PlayerState, ProvidedTrack,
@@ -277,6 +280,26 @@ impl ConnectState {
             .as_mut()
             .expect("the device_info has to be always given")
             .volume = volume;
+    }
+
+    pub fn set_supported_audio_quality(
+        &mut self,
+        quality: AudioQuality,
+        supports_hifi: Option<CapabilitySupportDetails>,
+    ) {
+        let capabilities = self
+            .device_mut()
+            .device_info
+            .as_mut()
+            .expect("the device_info has to be always given")
+            .capabilities
+            .as_mut()
+            .expect("capabilities are configured during initialization");
+
+        capabilities.supported_audio_quality = EnumOrUnknown::new(quality);
+        capabilities.supports_hifi = supports_hifi
+            .map(MessageField::some)
+            .unwrap_or_else(MessageField::none);
     }
 
     pub fn set_last_command(&mut self, command: Request) {
