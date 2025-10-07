@@ -53,6 +53,7 @@ pub type PlayerResult = Result<(), Error>;
 pub struct Player {
     commands: Option<mpsc::UnboundedSender<PlayerCommand>>,
     thread_handle: Option<thread::JoinHandle<()>>,
+    bitrate: Bitrate,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
@@ -437,6 +438,7 @@ impl Player {
         F: FnOnce() -> Box<dyn Sink> + Send + 'static,
     {
         let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
+        let bitrate = config.bitrate;
 
         if config.normalisation {
             debug!("Normalisation Type: {:?}", config.normalisation_type);
@@ -509,6 +511,7 @@ impl Player {
         Arc::new(Self {
             commands: Some(cmd_tx),
             thread_handle: Some(handle),
+            bitrate,
         })
     }
 
@@ -517,6 +520,10 @@ impl Player {
             return handle.is_finished();
         }
         true
+    }
+
+    pub fn bitrate(&self) -> Bitrate {
+        self.bitrate
     }
 
     fn command(&self, cmd: PlayerCommand) {
@@ -933,7 +940,7 @@ impl PlayerTrackLoader {
             AudioFileFormat::XHE_AAC_12 => 1.5,
             AudioFileFormat::XHE_AAC_16 => 2.,
             AudioFileFormat::XHE_AAC_24 => 3.,
-            AudioFileFormat::FLAC_FLAC_24BIT => 3.,
+            AudioFileFormat::FLAC_FLAC_24BIT => 224., // assume ~1.8 Mbit/s on average
         };
         let data_rate: f32 = kbps * 1024.;
         Some(data_rate.ceil() as usize)
@@ -991,8 +998,8 @@ impl PlayerTrackLoader {
         );
 
         // (Most) podcasts seem to support only 96 kbps Ogg Vorbis, so fall back to it
-        let formats = match self.config.bitrate {
-            Bitrate::Bitrate96 => [
+        let formats: &[AudioFileFormat] = match self.config.bitrate {
+            Bitrate::Bitrate96 => &[
                 AudioFileFormat::OGG_VORBIS_96,
                 AudioFileFormat::MP3_96,
                 AudioFileFormat::OGG_VORBIS_160,
@@ -1001,7 +1008,7 @@ impl PlayerTrackLoader {
                 AudioFileFormat::OGG_VORBIS_320,
                 AudioFileFormat::MP3_320,
             ],
-            Bitrate::Bitrate160 => [
+            Bitrate::Bitrate160 => &[
                 AudioFileFormat::OGG_VORBIS_160,
                 AudioFileFormat::MP3_160,
                 AudioFileFormat::OGG_VORBIS_96,
@@ -1010,7 +1017,18 @@ impl PlayerTrackLoader {
                 AudioFileFormat::OGG_VORBIS_320,
                 AudioFileFormat::MP3_320,
             ],
-            Bitrate::Bitrate320 => [
+            Bitrate::Bitrate320 => &[
+                AudioFileFormat::OGG_VORBIS_320,
+                AudioFileFormat::MP3_320,
+                AudioFileFormat::MP3_256,
+                AudioFileFormat::OGG_VORBIS_160,
+                AudioFileFormat::MP3_160,
+                AudioFileFormat::OGG_VORBIS_96,
+                AudioFileFormat::MP3_96,
+            ],
+            Bitrate::Lossless => &[
+                AudioFileFormat::FLAC_FLAC_24BIT,
+                AudioFileFormat::FLAC_FLAC,
                 AudioFileFormat::OGG_VORBIS_320,
                 AudioFileFormat::MP3_320,
                 AudioFileFormat::MP3_256,

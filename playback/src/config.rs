@@ -8,6 +8,7 @@ pub enum Bitrate {
     Bitrate96,
     Bitrate160,
     Bitrate320,
+    Lossless,
 }
 
 impl FromStr for Bitrate {
@@ -17,6 +18,7 @@ impl FromStr for Bitrate {
             "96" => Ok(Self::Bitrate96),
             "160" => Ok(Self::Bitrate160),
             "320" => Ok(Self::Bitrate320),
+            s if s.eq_ignore_ascii_case("lossless") => Ok(Self::Lossless),
             _ => Err(()),
         }
     }

@@ -12,11 +12,14 @@ use crate::{
     },
     model::{LoadRequest, PlayingTrack, SpircPlayStatus},
     playback::{
+        config::Bitrate,
         mixer::Mixer,
         player::{Player, PlayerEvent, PlayerEventChannel},
     },
     protocol::{
-        connect::{Cluster, ClusterUpdate, LogoutCommand, SetVolumeCommand},
+        connect::{
+            CapabilitySupportDetails, Cluster, ClusterUpdate, LogoutCommand, SetVolumeCommand,
+        },
         context::Context,
         explicit_content_pubsub::UserAttributesUpdate,
         playlist4_external::PlaylistModificationInfo,
@@ -168,7 +171,16 @@ impl Spirc {
         let spirc_id = SPIRC_COUNTER.fetch_add(1, Ordering::AcqRel);
         debug!("new Spirc[{spirc_id}]");
 
-        let connect_state = ConnectState::new(config, &session);
+        let mut connect_state = ConnectState::new(config, &session);
+        if player.bitrate() == Bitrate::Lossless {
+            let supports_hifi = CapabilitySupportDetails {
+                fully_supported: true,
+                user_eligible: true,
+                device_supported: true,
+                ..Default::default()
+            };
+            connect_state.set_supported_audio_quality(AudioQuality::HIFI, Some(supports_hifi));
+        }
 
         let connection_id_update = session
             .dealer()
